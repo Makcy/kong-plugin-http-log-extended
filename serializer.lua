@@ -1,6 +1,6 @@
 local _M = {}
 
-function _M.serialize(ngx, req_body, res_body) 
+function _M.serialize(ngx)
   local authenticated_entity
   if ngx.ctx.authenticated_credential ~= nil then
     authenticated_entity = {
@@ -14,18 +14,18 @@ function _M.serialize(ngx, req_body, res_body)
   return {
     request = {
       uri = request_uri,
-      url = ngx.var.scheme .. "://" .. ngx.var.host .. ":" .. ngx.var.server_port .. request_uri,
-      querystring = ngx.req.get_uri_args(), 
-      method = ngx.req.get_method(),
+      url = ngx.var.scheme .. "://" .. ngx.var.host .. ":" .. ngx.var.server_port .. request_uri
+      querystring = ngx.req.get_uri_args(), -- parameters, as a table
+      method = ngx.req.get_method(), -- http method
       headers = ngx.req.get_headers(),
       size = ngx.var.request_length,
-      body = req_body or {}
+      body = ""
     },
     response = {
       status = ngx.status,
-      headers = ngx.req.get_headers(),
+      headers = ngx.resp.get_headers(),
       size = ngx.var.bytes_sent,
-      body = res_body or {}
+      body = ""
     }, 
     latencies = {
       kong = (ngx.ctx.KONG_ACCESS_TIME or 0) +

@@ -2,7 +2,6 @@ local basic_serializer = require "kong.plugins.http-log-extended.serializer"
 local BasePlugin = require "kong.plugins.base_plugin"
 local cjson = require "cjson"
 local url = require "socket.url"
-local ngx_say = ngx.say
 
 local HttpLogExtendedHandler = BasePlugin:extend()
 
@@ -116,14 +115,14 @@ end
 -- @param `ngx` The context table for the request being logged
 -- @param `conf` plugin configuration table, holds http endpoint details
 -- @return html body as string
-function HttpLogExtendedHandler:serialize(ngx, conf)
-  return cjson.encode(basic_serializer.serialize(ngx, {}, {}))
+function HttpLogExtendedHandler:serialize(ngx)
+  return cjson.encode(basic_serializer.serialize(ngx))
 end
 
 function HttpLogExtendedHandler:log(conf)
   HttpLogExtendedHandler.super.log(self)
 
-  local ok, err = ngx.timer.at(0, log, conf, self:serialize(ngx, conf), self._name)
+  local ok, err = ngx.timer.at(0, log, conf, self:serialize(ngx), self._name)
   if not ok then
     ngx.log(ngx.ERR, "[" .. self._name .. "] failed to create timer: ", err)
   end
