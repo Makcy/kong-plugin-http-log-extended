@@ -17,6 +17,7 @@ build = {
   type = "builtin",
   modules = {
     ["kong.plugins.http-log-extended.handler"] = "handler.lua",
-    ["kong.plugins.http-log-extended.schema"] = "schema.lua"
+    ["kong.plugins.http-log-extended.schema"] = "schema.lua",
+    ["kong.plugins.http-log-extended.serializer"] = "serializer.lua"
   }
 }
