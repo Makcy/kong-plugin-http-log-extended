@@ -1,32 +1,16 @@
-local basic_serializer = require "kong.plugins.log-serializers.basic"
+local basic_serializer = require "kong.plugins.http-log-extended.serializer"
 local BasePlugin = require "kong.plugins.base_plugin"
 local cjson = require "cjson"
 local url = require "socket.url"
+local ngx_say = ngx.say
 
-local string_format = string.format
-local cjson_encode = cjson.encode
+local HttpLogExtendedHandler = BasePlugin:extend()
 
-local HttpLogHandler = BasePlugin:extend()
-
-HttpLogHandler.PRIORITY = 12
-HttpLogHandler.VERSION = "1.0"
+HttpLogExtendedHandler.PRIORITY = 4
+HttpLogExtendedHandler.VERSION = "1.0"
 
 local HTTP = "http"
 local HTTPS = "https"
-
-local req_body = {}
-
-local function get_body() 
-  ngx.req.read_body()
-  return ngx.req.get_body_data()
-end 
-
-local function decode_args(body)
-  if body then
-    return ngx.decode_args(body)
-  end
-  return {}
-end
 
 -- Generates the raw http message.
 -- @param `method` http method to be used to send data
@@ -34,26 +18,26 @@ end
 -- @param `parsed_url` contains the host details
 -- @param `body`  Body of the message as a string (must be encoded according to the `content_type` parameter)
 -- @return raw http message
-local function generate_post_payload(method, parsed_url, body)
+local function generate_post_payload(method, content_type, parsed_url, body)
   local url
   if parsed_url.query then
     url = parsed_url.path .. "?" .. parsed_url.query
   else
     url = parsed_url.path
   end
-  local headers = string_format(
-    "%s %s HTTP/1.1\r\nHost: %s\r\nConnection: Keep-Alive\r\nContent-Type: application/json\r\nContent-Length: %s\r\n",
-    method:upper(), url, parsed_url.host, string.len(body))
+  local headers = string.format(
+    "%s %s HTTP/1.1\r\nHost: %s\r\nConnection: Keep-Alive\r\nContent-Type: %s\r\nContent-Length: %s\r\n",
+    method:upper(), url, parsed_url.host, content_type, #body)
 
   if parsed_url.userinfo then
-    local auth_header = string_format(
+    local auth_header = string.format(
       "Authorization: Basic %s\r\n",
       ngx.encode_base64(parsed_url.userinfo)
     )
     headers = headers .. auth_header
   end
 
-  return string_format("%s\r\n%s", headers, body)
+  return string.format("%s\r\n%s", headers, body)
 end
 
 -- Parse host url.
@@ -107,7 +91,7 @@ local function log(premature, conf, body, name)
     end
   end
 
-  ok, err = sock:send(generate_post_payload(conf.method, parsed_url, body))
+  ok, err = sock:send(generate_post_payload(conf.method, conf.content_type, parsed_url, body))
   if not ok then
     ngx.log(ngx.ERR, name .. "failed to send data to " .. host .. ":" .. tostring(port) .. ": ", err)
   end
@@ -120,27 +104,24 @@ local function log(premature, conf, body, name)
 end
 
 -- Only provide `name` when deriving from this class. Not when initializing an instance.
-function HttpLogHandler:new(name)
-  HttpLogHandler.super.new(self, name or "http-log-extended")
+function HttpLogExtendedHandler:new(name)
+  HttpLogExtendedHandler.super.new(self, name or "http-log-extended")
 end
+
+function HttpLogExtendedHandler:access(conf) 
+  HttpLogExtendedHandler.super.access(self)
+end 
 
 -- serializes context data into an html message body.
 -- @param `ngx` The context table for the request being logged
 -- @param `conf` plugin configuration table, holds http endpoint details
 -- @return html body as string
-function HttpLogHandler:serialize(ngx, conf)
-  return cjson_encode(basic_serializer.serialize(ngx, req_body))
+function HttpLogExtendedHandler:serialize(ngx, conf)
+  return cjson.encode(basic_serializer.serialize(ngx, {}, {}))
 end
 
-function HttpLogHandler:access()
-  HttpLogHandler.super.access(self)
-  response = get_body()
-  -- req_body = parse_json(response)
-  req_body = decode_args(response)
-end 
-
-function HttpLogHandler:log(conf)
-  HttpLogHandler.super.log(self)
+function HttpLogExtendedHandler:log(conf)
+  HttpLogExtendedHandler.super.log(self)
 
   local ok, err = ngx.timer.at(0, log, conf, self:serialize(ngx, conf), self._name)
   if not ok then
@@ -148,4 +129,4 @@ function HttpLogHandler:log(conf)
   end
 end
 
-return HttpLogHandler
+return HttpLogExtendedHandler
