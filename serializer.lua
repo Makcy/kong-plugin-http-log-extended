@@ -19,13 +19,13 @@ function _M.serialize(ngx)
       method = ngx.req.get_method(), -- http method
       headers = ngx.req.get_headers(),
       size = ngx.var.request_length,
-      body = ctx.http_log_extended.req_body
+      body = ngx.ctx.http_log_extended.req_body
     },
     response = {
       status = ngx.status,
       headers = ngx.resp.get_headers(),
       size = ngx.var.bytes_sent,
-      body = ctx.http_log_extended.res_body
+      body = ngx.ctx.http_log_extended.res_body
     }, 
     latencies = {
       kong = (ngx.ctx.KONG_ACCESS_TIME or 0) +
