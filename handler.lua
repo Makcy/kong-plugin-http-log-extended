@@ -115,7 +115,8 @@ end
 
 function HttpLogExtendedHandler:access(conf) 
   HttpLogExtendedHandler.super.access(self)
-  ngx.ctx.http_log_extended = {}
+  ngx.ctx.http_log_extended = { req_body = "", res_body = "" }
+  
   if (conf.log_request_body) then 
     ngx.ctx.http_log_extended = { req_body = get_request_body() }
   end 
