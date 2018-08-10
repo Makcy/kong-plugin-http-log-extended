@@ -12,24 +12,9 @@ HttpLogExtendedHandler.VERSION = "1.0"
 local HTTP = "http"
 local HTTPS = "https"
 
-local function parse_json(body)
-  if body then
-    local status, res = pcall(cjson.decode, body)
-    if status then
-      return res
-    end
-  end
-  return nil
-end 
-
 local function get_request_body()
   ngx.req.read_body()
-  local body = ngx.req.get_body_data()
-  local payloads =  parse_json(body)
-  if payloads then 
-    return payloads
-  end 
-  return {}
+  return ngx.req.get_body_data()
 end 
 
 -- Generates the raw http message.
@@ -130,14 +115,20 @@ end
 
 function HttpLogExtendedHandler:access(conf) 
   HttpLogExtendedHandler.super.access(self)
-  ngx.ctx.http_log_extended = { req_body = {}, res_body = {} }
-  ngx.ctx.http_log_extended.req_body = get_request_body()
+  if (conf.log_request_body) then 
+    ngx.ctx.http_log_extended = { req_body = get_request_body() }
+  end 
 end 
 
 function HttpLogExtendedHandler:body_filter(conf) 
   HttpLogExtendedHandler.super.body_filter(self)
-  local chunk = ngx.arg[1]
-  ngx.ctx.http_log_extended.res_body = parse_json(chunk)
+  if (conf.log_response_body) then 
+    local chunk = ngx.arg[1]
+    local ctx = ngx.ctx
+    local res_body = ctx.http_log_extended and ctx.http_log_extended.res_body or ""
+    res_body = res_body .. (chunk or "")
+    ctx.http_log_extended.res_body = res_body
+  end 
 end 
 
 -- serializes context data into an html message body.
