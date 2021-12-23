@@ -129,7 +129,11 @@ function HttpLogExtendedHandler:body_filter(conf)
     local ctx = ngx.ctx
     local res_body = ctx.http_log_extended and ctx.http_log_extended.res_body or ""
     res_body = res_body .. (chunk or "")
-    ctx.http_log_extended.res_body = res_body
+    if (ctx.http_log_extended) then 
+      ctx.http_log_extended.res_body = res_body
+    else
+      ctx.http_log_extended = { res_body = res_body }
+    end 
   end 
 end 
 
