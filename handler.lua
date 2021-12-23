@@ -132,7 +132,7 @@ function HttpLogExtendedHandler:body_filter(conf)
     if (ctx.http_log_extended) then 
       ctx.http_log_extended.res_body = res_body
     else
-      ctx.http_log_extended = { req_body = res_body }
+      ctx.http_log_extended = { res_body = res_body }
     end 
   end 
 end 
